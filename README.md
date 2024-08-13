@@ -1,84 +1,113 @@
-# GoogleTranslate Spoon for Hammerspoon
+# GoogleTranslate Spoon
 
 ## Overview
 
-GoogleTranslate is a Spoon for Hammerspoon that provides quick and easy access to Google's translation service directly from your macOS desktop. With a simple hotkey, you can translate text between languages, making it an invaluable tool for multilingual work and study.
+GoogleTranslate is a Spoon for [Hammerspoon](http://www.hammerspoon.org/) that provides quick and easy access to Google's translation service. It includes a menu bar integration, translation history, language selection UI, and more.
 
 ## Features
 
-- Translate text between multiple languages
-- Quick language switching
-- Accumulates translation results for easy reference
-- Copy translations to clipboard
-- Customizable hotkeys
+- Translate text using Google Translate API
+- Menu bar integration for quick access to translation features
+- Translation history accessible from the menu bar
+- UI for selecting source and target languages
+- Clipboard integration for easy copy-paste of translations
+- Configurable hotkeys for translation
+- Supports multiple language pairs
 
 ## Requirements
 
-- [Hammerspoon](http://www.hammerspoon.org/) (Make sure you have the latest version installed)
-- A Google Cloud API Key with the Cloud Translation API enabled
+- Hammerspoon
+- Google Cloud API Key (for accessing Google Translate API)
 
 ## Installation
 
-1. Download the `GoogleTranslate.spoon` directory.
-2. Place it in your Hammerspoon Spoons directory (`~/.hammerspoon/Spoons/`).
-3. Add the following to your `~/.hammerspoon/init.lua`:
+1. Download the GoogleTranslate.spoon and place it in your Hammerspoon Spoons directory (`~/.hammerspoon/Spoons/`).
+2. Load the Spoon in your Hammerspoon configuration:
 
-   ```lua
-   hs.loadSpoon("GoogleTranslate")
-   ```
+```lua
+hs.loadSpoon("GoogleTranslate")
+```
 
 ## Configuration
 
-Before using the Spoon, you need to configure it with your Google Cloud API Key and set your preferred languages. Add the following to your `init.lua`:
+Configure the Spoon with your Google Cloud API Key and default language settings:
 
 ```lua
 spoon.GoogleTranslate:configure("YOUR_API_KEY", "en", "es")
 ```
 
-Replace `"YOUR_API_KEY"` with your actual Google Cloud API Key, and adjust the language codes as needed (e.g., "en" for English, "es" for Spanish).
+Replace `"YOUR_API_KEY"` with your actual Google Cloud API Key. The second and third parameters set the default source and target languages respectively (optional).
 
 ## Usage
 
-1. Bind a hotkey to activate the translation function:
+### Basic Usage
 
-   ```lua
-   spoon.GoogleTranslate:bindHotkeys({
-       translate = { {"cmd", "alt"}, "t" }
-   })
-   ```
-
-   This binds Command+Option+T to activate the translator.
-
-2. Press the hotkey to open the translation interface.
-3. Type the text you want to translate.
-4. Use the following commands within the interface:
-   - `Tab`: Switch between original text and translation
-   - `Cmd+T`: Switch source and target languages
-   - `Cmd+C`: Copy the selected translation to clipboard
-
-## Customization
-
-You can customize the source and target languages by modifying the `configure` function call in your `init.lua`:
+After configuration, you can use the Spoon's translate function:
 
 ```lua
-spoon.GoogleTranslate:configure("YOUR_API_KEY", "fr", "de")
+spoon.GoogleTranslate:translate()
 ```
 
-This example sets French as the source language and German as the target language.
+This will open a chooser interface where you can enter text to translate.
 
-## Contributing
+### Binding Hotkeys
 
-Contributions to improve GoogleTranslate are welcome! Please feel free to submit pull requests or create issues for bugs and feature requests.
+You can bind a hotkey to trigger the translation function:
+
+```lua
+spoon.GoogleTranslate:bindHotkeys({
+    translate = {{"cmd", "alt"}, "T"}
+})
+```
+
+This binds Cmd+Alt+T to open the translation interface.
+
+### Menu Bar Usage
+
+The Spoon adds a menu bar item (🌐) that provides quick access to:
+
+- Translation interface
+- Language selection for source and target languages
+- Recent translation history
+
+### Keyboard Shortcuts in Translation Interface
+
+- `Tab`: Switch between original text and translation
+- `Cmd+T`: Swap source and target languages
+- `Cmd+C`: Copy the selected translation to clipboard
+
+## Advanced Configuration
+
+You can modify the following settings in the Spoon:
+
+- `maxHistorySize`: Maximum number of translations to keep in history (default: 50)
+- `APIKEY`: Your Google Cloud API Key
+- `source`: Default source language
+- `target`: Default target language
+
+Example:
+
+```lua
+spoon.GoogleTranslate.maxHistorySize = 100
+spoon.GoogleTranslate.source = "fr"
+spoon.GoogleTranslate.target = "de"
+```
+
+## Troubleshooting
+
+- If translations fail, ensure your API key is correct and has the necessary permissions.
+- For any other issues, please check the Hammerspoon console for error messages.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+MIT License
 
 ## Acknowledgements
 
 - Owns heritage to [Translate-for-Hammerspoon](https://github.com/pasiaj/Translate-for-Hammerspoon), which in turn owns some heritage to [Anycomplete codebase](https://github.com/nathancahill/Anycomplete) by [Nathan Cahill](https://nathancahill.com/).
 - This Spoon uses the Google Cloud Translation API.
 
-## Support
+## Links
 
-If you encounter any issues or have questions, please file an issue on the GitHub repository.
+- [Hammerspoon](http://www.hammerspoon.org/)
+- [Google Cloud Translation API](https://cloud.google.com/translate)
