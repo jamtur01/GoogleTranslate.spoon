@@ -70,6 +70,29 @@ function obj:generateMenu()
     return menu
 end
 
+-- Update chooser
+function obj:updateChooser(chooser, choices, reset)
+    local query = chooser:query()
+    if query:len() == 0 then return reset() end
+
+    self:performTranslation(query, function(translation)
+        if query == translation then return end
+
+        local choice = {
+            ["text"] = translation,
+            ["subText"] = query,
+        }
+
+        local found = hs.fnutils.find(choices, function(element)
+            return element["text"] == translation
+        end)
+
+        if found == nil then table.insert(choices, 1, choice) end
+        chooser:choices(choices)
+    end)
+end
+
+
 -- Main translate function
 function obj:translate()
     if self.APIKEY == "" then
@@ -103,24 +126,31 @@ function obj:translate()
     end
 
     local function setLang(so, ta)
-        source = so
-        target = ta
-
+        self.source = so
+        self.target = ta
+    
         hs.alert.closeSpecific(alerts["langPrimary"], 0)
         hs.alert.closeSpecific(alerts["langSecondary"], 0)
-
-        alerts["langPrimary"] = hs.alert.show(string.format('%s ⇢ %s', string.upper(source), string.upper(target)), { ["textSize"] = 50 }, 2)
+    
+        alerts["langPrimary"] = hs.alert.show(string.format('%s ⇢ %s', string.upper(self.source), string.upper(self.target)), { ["textSize"] = 50 }, 2)
         alerts["langSecondary"] = hs.alert.show('⌘T to switch.', 2)
-    end
-
-    tab = hs.hotkey.bind('', 'tab', function()
-        local id = chooser:selectedRow()
-        local item = choices[id]
-        if not item then return end
-        chooser:query(item.subText)
+    
+        -- Trigger re-translation with the updated languages
+        local currentQuery = chooser:query()
         reset()
-        updateChooser()
+        self:updateChooser(chooser, choices, reset)
+    end
+    
+
+    t = hs.hotkey.bind('cmd', 't', function()
+        setLang(self.target, self.source)
+        local currentQuery = chooser:query()
+        reset()
+        chooser:query(currentQuery)  -- Force re-query with the updated languages
+        self:updateChooser(chooser, choices, reset)
     end)
+    
+
 
     t = hs.hotkey.bind('cmd', 't', function()
         setLang(target, source)
@@ -139,28 +169,9 @@ function obj:translate()
         end
     end)
 
-    local function updateChooser()
-        local string = chooser:query()
-        if string:len() == 0 then return reset() end
-
-        self:performTranslation(string, function(translation)
-            if string == translation then return end
-
-            local choice = {
-                ["text"] = translation,
-                ["subText"] = string,
-            }
-
-            local found = hs.fnutils.find(choices, function(element)
-                return element["text"] == translation
-            end)
-
-            if found == nil then table.insert(choices, 1, choice) end
-            chooser:choices(choices)
-        end)
-    end
-
-    chooser:queryChangedCallback(updateChooser)
+    chooser:queryChangedCallback(function()
+        self:updateChooser(chooser, choices, reset)
+    end)
     chooser:searchSubText(false)
     chooser:show()
     setLang(source, target)
@@ -196,6 +207,7 @@ function obj:performTranslation(text, callback)
         end
     end)
 end
+
 
 -- Add to translation history
 function obj:addToHistory(original, translated)
