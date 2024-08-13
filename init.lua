@@ -24,10 +24,13 @@ end
 
 -- Initialize the Spoon
 function obj:init()
+    self.source = hs.settings.get("GoogleTranslate_source") or self.source
+    self.target = hs.settings.get("GoogleTranslate_target") or self.target
     self.menuBar = hs.menubar.new()
     self:setupMenuBar()
     return self
 end
+
 
 -- Configure the Spoon
 function obj:configure(APIKEY, source, target)
@@ -204,16 +207,18 @@ end
 
 -- Set language
 function obj:setLanguage(which)
-    local chooser = hs.chooser.new(function(selection)
-        if selection then
-            if which == "source" then
-                self.source = selection.code
-            else
-                self.target = selection.code
-            end
-            hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
+local chooser = hs.chooser.new(function(selection)
+    if selection then
+        if which == "source" then
+            self.source = selection.code
+            hs.settings.set("GoogleTranslate_source", selection.code)
+        else
+            self.target = selection.code
+            hs.settings.set("GoogleTranslate_target", selection.code)
         end
-    end)
+        hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
+    end
+end)
     
     local languages = {
         {text = "English", code = "en"},
