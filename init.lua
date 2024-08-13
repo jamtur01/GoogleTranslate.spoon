@@ -6,7 +6,7 @@ obj.name = "GoogleTranslate"
 obj.version = "2.0"
 obj.author = "James Turnbull <james@lovedthanlost.net>"
 obj.license = "MIT"
-obj.homepage = "https://github.com/jamtur01/GoogleTranslateSpoon"
+obj.homepage = "https://github.com/jamtur01/GoogleTranslate.spoon"
 
 -- Default settings
 obj.APIKEY = ""
