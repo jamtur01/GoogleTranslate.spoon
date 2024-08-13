@@ -140,7 +140,6 @@ function obj:translate()
         reset()
         self:updateChooser(chooser, choices, reset)
     end
-    
 
     t = hs.hotkey.bind('cmd', 't', function()
         setLang(self.target, self.source)
@@ -150,8 +149,6 @@ function obj:translate()
         self:updateChooser(chooser, choices, reset)
     end)
     
-
-
     t = hs.hotkey.bind('cmd', 't', function()
         setLang(target, source)
         reset()
@@ -207,7 +204,6 @@ function obj:performTranslation(text, callback)
         end
     end)
 end
-
 
 -- Add to translation history
 function obj:addToHistory(original, translated)
