@@ -133,7 +133,7 @@ function obj:translate()
         hs.alert.closeSpecific(alerts["langSecondary"], 0)
     
         alerts["langPrimary"] = hs.alert.show(string.format('%s ⇢ %s', string.upper(self.source), string.upper(self.target)), { ["textSize"] = 50 }, 2)
-        alerts["langSecondary"] = hs.alert.show('⌘T to switch.', 2)
+        alerts["langSecondary"] = hs.alert.show('⌘⌥T to switch.', 2)
     
         -- Trigger re-translation with the updated languages
         local currentQuery = chooser:query()
@@ -141,7 +141,7 @@ function obj:translate()
         self:updateChooser(chooser, choices, reset)
     end
 
-    t = hs.hotkey.bind('cmd', 't', function()
+    t = hs.hotkey.bind({'cmd', 'alt'}, 't', function()
         setLang(self.target, self.source)
         local currentQuery = chooser:query()
         reset()
