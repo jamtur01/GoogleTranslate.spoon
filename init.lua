@@ -2,41 +2,44 @@ local obj = {}
 obj.__index = obj
 
 -- Metadata
-obj.name = "GoogleTranslate"
-obj.version = "2.0"
+obj.name = "Translate"
+obj.version = "1.0"
 obj.author = "James Turnbull <james@lovedthanlost.net>"
 obj.license = "MIT"
-obj.homepage = "https://github.com/jamtur01/GoogleTranslate.spoon"
+obj.homepage = "https://github.com/jamtur01/Translate.spoon"
 
 -- Default settings
 obj.APIKEY = ""
+obj.apiProvider = "google"  -- Options: "google" or "deepl"
 obj.source = "en"
 obj.target = "es"
 obj.history = {}
 obj.maxHistorySize = 50
 
 -- Constructor
-function obj.new(apiKey, sourceLang, targetLang)
+function obj.new(apiKey, sourceLang, targetLang, provider)
     local self = setmetatable({}, obj)
-    self:configure(apiKey, sourceLang, targetLang)
+    self:configure(apiKey, sourceLang, targetLang, provider)
     return self
 end
 
 -- Initialize the Spoon
 function obj:init()
-    self.source = hs.settings.get("GoogleTranslate_source") or self.source
-    self.target = hs.settings.get("GoogleTranslate_target") or self.target
+    self.source = hs.settings.get("Translate_source") or self.source
+    self.target = hs.settings.get("Translate_target") or self.target
+    self.apiProvider = hs.settings.get("Translate_apiProvider") or self.apiProvider
     self.menuBar = hs.menubar.new()
     self:setupMenuBar()
     return self
 end
 
-
 -- Configure the Spoon
-function obj:configure(APIKEY, source, target)
+function obj:configure(APIKEY, source, target, provider)
     self.APIKEY = APIKEY or self.APIKEY
     self.source = source or self.source
     self.target = target or self.target
+    self.apiProvider = provider or self.apiProvider
+    hs.settings.set("Translate_apiProvider", self.apiProvider)
 end
 
 -- Setup menu bar
@@ -55,10 +58,11 @@ function obj:generateMenu()
         {title = "Translate", fn = function() self:translate() end},
         {title = "Set Source Language", fn = function() self:setLanguage("source") end},
         {title = "Set Target Language", fn = function() self:setLanguage("target") end},
+        {title = "Switch API Provider", fn = function() self:switchProvider() end},
         {title = "-"},
         {title = "Translation History", disabled = true},
     }
-    
+
     -- Add history items
     for i = 1, math.min(5, #self.history) do
         table.insert(menu, {
@@ -66,44 +70,23 @@ function obj:generateMenu()
             fn = function() hs.pasteboard.setContents(self.history[i].translated) end
         })
     end
-    
+
     return menu
 end
 
--- Update chooser
-function obj:updateChooser(chooser, choices, reset)
-    local query = chooser:query()
-    if query:len() == 0 then return reset() end
-
-    self:performTranslation(query, function(translation)
-        if query == translation then return end
-
-        local choice = {
-            ["text"] = translation,
-            ["subText"] = query,
-        }
-
-        local found = hs.fnutils.find(choices, function(element)
-            return element["text"] == translation
-        end)
-
-        if found == nil then table.insert(choices, 1, choice) end
-        chooser:choices(choices)
-    end)
+-- Switch between Google and DeepL API providers
+function obj:switchProvider()
+    self.apiProvider = self.apiProvider == "google" and "deepl" or "google"
+    hs.alert.show("API Provider switched to " .. self.apiProvider)
+    hs.settings.set("Translate_apiProvider", self.apiProvider)
 end
-
 
 -- Main translate function
 function obj:translate()
     if self.APIKEY == "" then
-        hs.alert('You must enter your Google Cloud API KEY')
+        hs.alert('You must enter your API KEY')
         return
     end
-
-    local GOOGLE_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2?key=%s'
-    local API_KEY = self.APIKEY
-    local target = self.target
-    local source = self.source
 
     local alerts = {}
     local current = hs.application.frontmostApplication()
@@ -150,7 +133,7 @@ function obj:translate()
     end)
     
     t = hs.hotkey.bind('cmd', 't', function()
-        setLang(target, source)
+        setLang(self.target, self.source)
         reset()
     end)
 
@@ -171,11 +154,48 @@ function obj:translate()
     end)
     chooser:searchSubText(false)
     chooser:show()
-    setLang(source, target)
+    setLang(self.source, self.target)
 end
 
--- Perform translation
+-- Update chooser based on the current query
+function obj:updateChooser(chooser, choices, reset)
+    local query = chooser:query()
+    if query:len() == 0 then 
+        reset()
+        return 
+    end
+
+    self:performTranslation(query, function(translation)
+        if query == translation then return end
+
+        local choice = {
+            ["text"] = translation,
+            ["subText"] = query,
+        }
+
+        local found = hs.fnutils.find(choices, function(element)
+            return element["text"] == translation
+        end)
+
+        if found == nil then 
+            table.insert(choices, 1, choice)
+        end
+
+        chooser:choices(choices)
+    end)
+end
+
+-- Perform translation for both Google and DeepL
 function obj:performTranslation(text, callback)
+    if self.apiProvider == "google" then
+        self:performGoogleTranslation(text, callback)
+    else
+        self:performDeepLTranslation(text, callback)
+    end
+end
+
+-- Perform Google translation
+function obj:performGoogleTranslation(text, callback)
     local url = string.format(
         "https://translation.googleapis.com/language/translate/v2?key=%s",
         self.APIKEY
@@ -200,7 +220,40 @@ function obj:performTranslation(text, callback)
             hs.pasteboard.setContents(translatedText)
             if callback then callback(translatedText) end
         else
-            hs.alert.show("Translation failed: " .. (status or "unknown error"))
+            hs.alert.show("Google Translation failed: " .. (status or "unknown error"))
+        end
+    end)
+end
+
+-- Perform DeepL translation
+function obj:performDeepLTranslation(text, callback)
+    -- Determine the correct DeepL API endpoint based on plan
+    local DEEPL_ENDPOINT = self.apiPlan == "pro" 
+        and 'https://api.deepl.com/v2/translate' 
+        or 'https://api-free.deepl.com/v2/translate'
+
+    local url = DEEPL_ENDPOINT
+
+    local headers = {
+        ["Authorization"] = "DeepL-Auth-Key " .. self.APIKEY,
+        ["Content-Type"] = "application/json"
+    }
+
+    local body = hs.json.encode({
+        text = { text },
+        source_lang = self.source,
+        target_lang = self.target
+    })
+
+    hs.http.asyncPost(url, body, headers, function(status, responseBody, responseHeaders)
+        if status == 200 then
+            local response = hs.json.decode(responseBody)
+            local translatedText = response.translations[1].text
+            self:addToHistory(text, translatedText)
+            hs.pasteboard.setContents(translatedText)
+            if callback then callback(translatedText) end
+        else
+            hs.alert.show("DeepL Translation failed: " .. (status or "unknown error"))
         end
     end)
 end
@@ -215,19 +268,19 @@ end
 
 -- Set language
 function obj:setLanguage(which)
-local chooser = hs.chooser.new(function(selection)
-    if selection then
-        if which == "source" then
-            self.source = selection.code
-            hs.settings.set("GoogleTranslate_source", selection.code)
-        else
-            self.target = selection.code
-            hs.settings.set("GoogleTranslate_target", selection.code)
+    local chooser = hs.chooser.new(function(selection)
+        if selection then
+            if which == "source" then
+                self.source = selection.code
+                hs.settings.set("Translate_source", selection.code)
+            else
+                self.target = selection.code
+                hs.settings.set("Translate_target", selection.code)
+            end
+            hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
         end
-        hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
-    end
-end)
-    
+    end)
+
     local languages = {
         {text = "English", code = "en"},
         {text = "Spanish", code = "es"},
@@ -240,11 +293,11 @@ end)
         {text = "Russian", code = "ru"},
         {text = "Arabic", code = "ar"}
     }
-    
+
     if which == "source" then
         table.insert(languages, 1, {text = "Auto Detect", code = "auto"})
     end
-    
+
     chooser:choices(languages)
     chooser:show()
 end
