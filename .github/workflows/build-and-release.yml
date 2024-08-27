@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get Spoon Name
         id: spoon_name
@@ -41,7 +41,7 @@ jobs:
         run: ls -l dist/
 
       - name: Upload the Spoon Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
           path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Download Spoon Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.spoon_name }}.spoon.zip
 
