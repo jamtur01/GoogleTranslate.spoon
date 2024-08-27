@@ -1,6 +1,8 @@
 ## Version v1.0
 - Fixed makefile
 - Update CHANGELOG.md for release v1.0
+- Fixed makefile
+- Update CHANGELOG.md for release v1.0
 - Updated Makefile
 - Update CHANGELOG.md for release v1.0
 - Testing a change?
