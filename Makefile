@@ -24,7 +24,6 @@ changelog:
 check_tag_exists:
 	@if git rev-parse "$(BASE_TAG)" >/dev/null 2>&1; then \
 		echo "Tag $(BASE_TAG) already exists, updating tag to include SHA"; \
-		echo "Updated tag: $(BASE_TAG)-$(SHORT_GIT_SHA)"; \
 		$(eval TAG=$(BASE_TAG)-$(SHORT_GIT_SHA)); \
 	fi
 
