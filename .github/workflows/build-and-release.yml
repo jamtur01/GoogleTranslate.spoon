@@ -1,9 +1,9 @@
-name: Build and Release Hammerspoon Spoon
+name: Build, Tag, and Release Hammerspoon Spoon
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: setup-lua
+      - name: Set up Lua
         uses: xpol/setup-lua@v0.3
 
       - name: Get Spoon Name
@@ -48,15 +48,28 @@ jobs:
           version=$(grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2 || echo "")
           echo "::set-output name=version::$version"
 
-      - name: Determine Release Version
-        id: release_version
+      - name: Determine Tag Name
+        id: tag_name
         run: |
           if [ -n "${{ steps.version.outputs.version }}" ]; then
-            echo "::set-output name=release_version::${{ steps.version.outputs.version }}-${{ steps.git-sha.outputs.sha }}"
+            echo "::set-output name=tag_name::v${{ steps.version.outputs.version }}"
           else
             date=$(date +"%Y%m%d")
-            echo "::set-output name=release_version::${date}-${{ steps.git-sha.outputs.sha }}"
+            echo "::set-output name=tag_name::${date}-${{ steps.git-sha.outputs.sha }}"
           fi
+
+      - name: Create and Push Git Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Create a new tag based on the determined tag name
+          git tag -a ${{ steps.tag_name.outputs.tag_name }} -m "Release ${{ steps.tag_name.outputs.tag_name }}"
+
+          # Push the tag to the repository
+          git push origin ${{ steps.tag_name.outputs.tag_name }}
 
   release:
     needs: build
@@ -75,7 +88,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.release_version.outputs.release_version }}
+          tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
+          name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
           files: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
