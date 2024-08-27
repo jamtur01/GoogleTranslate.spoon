@@ -21,6 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install git-chglog
+        run: |
+          curl -sSL https://github.com/git-chglog/git-chglog/releases/download/v0.15.1/git-chglog_0.15.1_linux_amd64.tar.gz | tar -xz -C /usr/local/bin git-chglog
+
       - name: Get Spoon Name
         id: spoon_name
         run: |
@@ -30,25 +34,6 @@ jobs:
             exit 1
           fi
           echo "spoon_name=${spoon_name}" >> $GITHUB_OUTPUT
-
-      - name: Generate Changelog
-        run: |
-          # Install github-changelog-generator locally
-          gem install --user-install github_changelog_generator
-          # Ensure the gem's bin directory is in the PATH
-          export PATH="$HOME/.local/share/gem/ruby/$(ls $HOME/.local/share/gem/ruby)/bin:$PATH"
-          # Generate the changelog and append to CHANGELOG.md
-          github_changelog_generator -u ${{ github.repository_owner }} -p ${{ github.event.repository.name }}
-
-      - name: Commit and Push Changelog
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add CHANGELOG.md
-          git commit -m "Update CHANGELOG.md for release ${{ steps.tag_name.outputs.tag_name }}"
-          git push origin main
 
       - name: Get the Git SHA
         id: git-sha
@@ -72,6 +57,21 @@ jobs:
             tag_name="${datetime}"
           fi
           echo "tag_name=${tag_name}" >> $GITHUB_OUTPUT
+
+      - name: Generate Changelog
+        run: |
+          # Generate changelog with git-chglog
+          git-chglog -o CHANGELOG.md ${{ steps.tag_name.outputs.tag_name }}
+
+      - name: Commit and Push Changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG.md for release ${{ steps.tag_name.outputs.tag_name }}"
+          git push origin main
 
       - name: Create and Push Git Tag
         env:
