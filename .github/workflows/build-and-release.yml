@@ -11,74 +11,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Lua
-      uses: tristanlatr/gha-setup-lua@v1
-      with:
-        luaVersion: "5.4" # Set the Lua version as per your requirement
+      - name: setup-lua
+        uses: ljmf00/setup-lua@v.1.0.1
 
-    - name: Get Spoon Name
-      id: spoon_name
-      run: |
-        # Extract Spoon name from the init.lua file (assuming obj.name is defined)
-        spoon_name=$(grep -Eo 'obj.name\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2)
-        if [ -z "$spoon_name" ]; then
-          echo "Spoon name not found, failing the job."
-          exit 1
-        fi
-        echo "Spoon name: $spoon_name"
-        echo "::set-output name=spoon_name::$spoon_name"
+      - name: Get Spoon Name
+        id: spoon_name
+        run: |
+          # Extract Spoon name from the init.lua file (assuming obj.name is defined)
+          spoon_name=$(grep -Eo 'obj.name\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2)
+          if [ -z "$spoon_name" ]; then
+            echo "Spoon name not found, failing the job."
+            exit 1
+          fi
+          echo "Spoon name: $spoon_name"
+          echo "::set-output name=spoon_name::$spoon_name"
 
-    - name: Build the Spoon
-      run: |
-        # Create a distribution directory
-        mkdir -p dist
+      - name: Build the Spoon
+        run: |
+          # Create a distribution directory
+          mkdir -p dist
 
-        # Zip the entire Spoon directory and name it after the Spoon
-        zip -r dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip . -x ".git*" ".github*" "dist/*"
+          # Zip the entire Spoon directory and name it after the Spoon
+          zip -r dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip . -x ".git*" ".github*" "dist/*"
 
-    - name: Get the Git SHA
-      id: git-sha
-      run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+      - name: Get the Git SHA
+        id: git-sha
+        run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
 
-    - name: Extract obj.version from spoon
-      id: version
-      run: |
-        # Extract version from obj.version if available
-        version=$(grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2 || echo "")
-        echo "::set-output name=version::$version"
+      - name: Extract obj.version from spoon
+        id: version
+        run: |
+          # Extract version from obj.version if available
+          version=$(grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2 || echo "")
+          echo "::set-output name=version::$version"
 
-    - name: Determine Release Version
-      id: release_version
-      run: |
-        if [ -n "${{ steps.version.outputs.version }}" ]; then
-          echo "::set-output name=release_version::${{ steps.version.outputs.version }}-${{ steps.git-sha.outputs.sha }}"
-        else
-          date=$(date +"%Y%m%d")
-          echo "::set-output name=release_version::${date}-${{ steps.git-sha.outputs.sha }}"
-        fi
+      - name: Determine Release Version
+        id: release_version
+        run: |
+          if [ -n "${{ steps.version.outputs.version }}" ]; then
+            echo "::set-output name=release_version::${{ steps.version.outputs.version }}-${{ steps.git-sha.outputs.sha }}"
+          else
+            date=$(date +"%Y%m%d")
+            echo "::set-output name=release_version::${date}-${{ steps.git-sha.outputs.sha }}"
+          fi
 
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Upload the release asset
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
-        path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+      - name: Upload the release asset
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+          path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        name: ${{ steps.release_version.outputs.release_version }}
-        files: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.release_version.outputs.release_version }}
+          files: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
