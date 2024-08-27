@@ -31,19 +31,22 @@ jobs:
           fi
           echo "spoon_name=${spoon_name}" >> $GITHUB_OUTPUT
 
-      - name: Build the Spoon
+      - name: Generate Changelog
         run: |
-          mkdir -p dist
-          zip -r dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip . -x ".git*" ".github*" "dist/*"
+          # Install github-changelog-generator if using it
+          gem install github_changelog_generator
+          # Generate changelog and append to CHANGELOG.md
+          github_changelog_generator -u ${{ github.repository_owner }} -p ${{ github.event.repository.name }}
 
-      - name: List Files in dist/ for Debugging
-        run: ls -l dist/
-
-      - name: Upload the Spoon Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
-          path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+      - name: Commit and Push Changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG.md for release ${{ steps.tag_name.outputs.tag_name }}"
+          git push origin main
 
       - name: Get the Git SHA
         id: git-sha
@@ -76,6 +79,20 @@ jobs:
           git config user.email "actions@github.com"
           git tag -a ${{ steps.tag_name.outputs.tag_name }} -m "Release ${{ steps.tag_name.outputs.tag_name }}"
           git push origin ${{ steps.tag_name.outputs.tag_name }}
+
+      - name: Build the Spoon
+        run: |
+          mkdir -p dist
+          zip -r dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip . -x ".git*" ".github*" "dist/*"
+
+      - name: List Files in dist/ for Debugging
+        run: ls -l dist/
+
+      - name: Upload the Spoon Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+          path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
 
   release:
     needs: build
