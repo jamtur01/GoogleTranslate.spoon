@@ -40,6 +40,12 @@ jobs:
       - name: List Files in dist/ for Debugging
         run: ls -l dist/
 
+      - name: Upload the Spoon Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+          path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+
       - name: Get the Git SHA
         id: git-sha
         run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
@@ -75,24 +81,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: List Files in dist/ for Debugging in Release Job
-        run: ls -l dist/
-
-      - name: Upload the release asset
-        uses: actions/upload-artifact@v3
+      - name: Download Spoon Artifact
+        uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.spoon_name }}.spoon.zip
-          path: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
-          if-no-files-found: warn
+
+      - name: List Files in dist/ for Debugging in Release Job
+        run: ls -l .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag_name }}
-          name: ${{ needs.build.outputs.tag_name }}
-          files: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
+          tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
+          name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
+          files: ${{ needs.build.outputs.spoon_name }}.spoon.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
