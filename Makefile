@@ -4,7 +4,7 @@ BASE_TAG=v$(OBJ_VERSION)
 TAG=$(BASE_TAG)
 
 # Release target
-release: clean_changelog changelog create_tag push_tag
+release: clean_changelog changelog check_tag_exists create_tag push_tag
 
 # Clean the old changelog file
 clean_changelog:
@@ -20,15 +20,18 @@ changelog:
 	@git add CHANGELOG.md
 	@git commit -m "Update CHANGELOG.md for release $(TAG)"
 
+# Check if the base tag exists, and update TAG if necessary
+check_tag_exists:
+	@if git rev-parse "$(BASE_TAG)" >/dev/null 2>&1; then \
+		echo "Tag $(BASE_TAG) already exists, updating tag to include SHA"; \
+		TAG=$(BASE_TAG)-$(SHORT_GIT_SHA); \
+		echo "Updated tag: $$TAG"; \
+		else echo "Creating new tag $(BASE_TAG)"; \
+	fi
+
 # Create a git tag, with logic to append shortened SHA if the base tag already exists
 create_tag:
-	@if git rev-parse "$(BASE_TAG)" >/dev/null 2>&1; then \
-		echo "Tag $(BASE_TAG) already exists, creating new tag with shortened SHA"; \
-		TAG="$(BASE_TAG)-$(SHORT_GIT_SHA)"; \
-	else \
-		echo "Creating new tag $(BASE_TAG)"; \
-	fi; \
-	git tag -a $(TAG) -m "Release $(TAG)"
+	@git tag -a $(TAG) -m "Release $(TAG)"
 	@echo "Tag created: $(TAG)"
 
 # Push the code and tag
