@@ -24,7 +24,6 @@ jobs:
       - name: Get Spoon Name
         id: spoon_name
         run: |
-          # Extract Spoon name from the init.lua file (assuming obj.name is defined)
           spoon_name=$(grep -Eo 'obj.name\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2)
           if [ -z "$spoon_name" ]; then
             echo "Spoon name not found, failing the job."
@@ -35,11 +34,11 @@ jobs:
 
       - name: Build the Spoon
         run: |
-          # Create a distribution directory
           mkdir -p dist
-
-          # Zip the entire Spoon directory and name it after the Spoon
           zip -r dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip . -x ".git*" ".github*" "dist/*"
+
+      - name: List Files in dist/ for Debugging
+        run: ls -l dist/
 
       - name: Get the Git SHA
         id: git-sha
@@ -48,23 +47,18 @@ jobs:
       - name: Extract obj.version from spoon
         id: version
         run: |
-          # Extract version from obj.version if available
           version=$(grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2 || echo "")
           echo "::set-output name=version::$version"
 
       - name: Determine Tag Name
         id: tag_name
         run: |
-          # Get current date and time
           datetime=$(date +"%Y%m%d-%H%M%S")
-
-          # If obj.version is present, use it with a date-time suffix; otherwise, just use date-time
           if [ -n "${{ steps.version.outputs.version }}" ]; then
             tag_name="v${{ steps.version.outputs.version }}-${datetime}"
           else
             tag_name="${datetime}"
           fi
-
           echo "::set-output name=tag_name::$tag_name"
 
       - name: Create and Push Git Tag
@@ -73,11 +67,7 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-
-          # Create a new tag based on the determined tag name
           git tag -a ${{ steps.tag_name.outputs.tag_name }} -m "Release ${{ steps.tag_name.outputs.tag_name }}"
-
-          # Push the tag to the repository
           git push origin ${{ steps.tag_name.outputs.tag_name }}
 
   release:
@@ -88,17 +78,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: List Files in dist/ for Debugging in Release Job
+        run: ls -l dist/
+
       - name: Upload the release asset
         uses: actions/upload-artifact@v3
         with:
           name: ${{ needs.build.outputs.spoon_name }}.spoon.zip
           path: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
+          if-no-files-found: warn
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
-          name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
+          tag_name: ${{ needs.build.outputs.tag_name }}
+          name: ${{ needs.build.outputs.tag_name }}
           files: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
