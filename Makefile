@@ -1,0 +1,38 @@
+OBJ_VERSION=$(shell grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2)
+SHORT_GIT_SHA=$(shell git rev-parse --short HEAD)
+BASE_TAG=v$(OBJ_VERSION)
+TAG=$(BASE_TAG)
+
+# Release target
+release: clean_changelog changelog create_tag push_tag
+
+# Clean the old changelog file
+clean_changelog:
+	@echo "Cleaning old CHANGELOG.md"
+	@rm -f CHANGELOG.md
+
+# Generate a simple changelog from git log
+changelog:
+	@echo "Generating CHANGELOG.md"
+	@echo "## Version $(TAG)" > CHANGELOG.md
+	@git log --pretty=format:"- %s" $(shell git describe --tags --abbrev=0)..HEAD >> CHANGELOG.md
+	@echo "Changelog generated."
+	@git add CHANGELOG.md
+	@git commit -m "Update CHANGELOG.md for release $(TAG)"
+
+# Create a git tag, with logic to append shortened SHA if the base tag already exists
+create_tag:
+	@if git rev-parse "$(BASE_TAG)" >/dev/null 2>&1; then \
+		echo "Tag $(BASE_TAG) already exists, creating new tag with shortened SHA"; \
+		TAG="$(BASE_TAG)-$(SHORT_GIT_SHA)"; \
+	else \
+		echo "Creating new tag $(BASE_TAG)"; \
+	fi; \
+	git tag -a $(TAG) -m "Release $(TAG)"
+	@echo "Tag created: $(TAG)"
+
+# Push the code and tag
+push_tag:
+	@git push origin main
+	@git push origin $(TAG)
+	@echo "Code and tag pushed to GitHub: $(TAG)"
