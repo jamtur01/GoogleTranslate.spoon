@@ -13,12 +13,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    outputs:
+      spoon_name: ${{ steps.spoon_name.outputs.spoon_name }}
+      tag_name: ${{ steps.tag_name.outputs.tag_name }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Lua
-        uses: xpol/setup-lua@v0.3
 
       - name: Get Spoon Name
         id: spoon_name
@@ -85,14 +86,14 @@ jobs:
       - name: Upload the release asset
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
-          path: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+          name: ${{ needs.build.outputs.spoon_name }}.spoon.zip
+          path: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
-          name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
-          files: dist/${{ steps.spoon_name.outputs.spoon_name }}.spoon.zip
+          tag_name: ${{ needs.build.outputs.tag_name }}
+          name: ${{ needs.build.outputs.tag_name }}
+          files: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
