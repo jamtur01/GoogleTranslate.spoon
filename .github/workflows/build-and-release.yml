@@ -21,10 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install git-chglog
-        run: |
-          curl -sSL https://github.com/git-chglog/git-chglog/releases/download/v0.15.1/git-chglog_0.15.1_linux_amd64.tar.gz | tar -xz -C /usr/local/bin git-chglog
-
       - name: Get Spoon Name
         id: spoon_name
         run: |
@@ -58,10 +54,20 @@ jobs:
           fi
           echo "tag_name=${tag_name}" >> $GITHUB_OUTPUT
 
-      - name: Generate Changelog
+      - name: Generate Simple Changelog
         run: |
-          # Generate changelog with git-chglog
-          git-chglog -o CHANGELOG.md ${{ steps.tag_name.outputs.tag_name }}
+          # Get the previous tag
+          last_tag=$(git describe --tags --abbrev=0)
+          current_tag="${{ steps.tag_name.outputs.tag_name }}"
+          
+          # Write the version header
+          echo "## Version ${current_tag}" > CHANGELOG.md
+          
+          # List commits between the last tag and the current state
+          git log ${last_tag}..HEAD --pretty=format:"- %s" >> CHANGELOG.md
+          
+          # Ensure the changelog is readable
+          cat CHANGELOG.md
 
       - name: Commit and Push Changelog
         env:
