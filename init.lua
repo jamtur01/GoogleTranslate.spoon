@@ -10,7 +10,7 @@ obj.homepage = "https://github.com/jamtur01/Translate.spoon"
 
 -- Default settings
 obj.APIKEY = ""
-obj.apiProvider = "google"  -- Options: "google" or "deepl"
+obj.apiProvider = "google"
 obj.source = "en"
 obj.target = "es"
 obj.history = {}
@@ -46,9 +46,7 @@ end
 function obj:setupMenuBar()
     if self.menuBar then
         self.menuBar:setTitle("🌐")
-        self.menuBar:setMenu(function()
-            return self:generateMenu()
-        end)
+        self.menuBar:setMenu(function() return self:generateMenu() end)
     end
 end
 
@@ -90,56 +88,41 @@ function obj:translate()
 
     local alerts = {}
     local current = hs.application.frontmostApplication()
-    local tab, copy, t
     local choices = {}
 
     local chooser = hs.chooser.new(function(chosen)
-        if copy then copy:delete() end
-        if tab then tab:delete() end
-        if t then t:delete() end
         current:activate()
         if chosen then
             self:performTranslation(chosen.text)
         end
     end)
 
-    -- Removes all items in list
     local function reset()
         chooser:choices({})
     end
 
     local function setLang(so, ta)
-        self.source = so
-        self.target = ta
-    
+        self.source, self.target = so, ta
         hs.alert.closeSpecific(alerts["langPrimary"], 0)
         hs.alert.closeSpecific(alerts["langSecondary"], 0)
-    
         alerts["langPrimary"] = hs.alert.show(string.format('%s ⇢ %s', string.upper(self.source), string.upper(self.target)), { ["textSize"] = 50 }, 2)
         alerts["langSecondary"] = hs.alert.show('⌘⌥T to switch.', 2)
-    
-        -- Trigger re-translation with the updated languages
-        local currentQuery = chooser:query()
         reset()
         self:updateChooser(chooser, choices, reset)
     end
 
-    t = hs.hotkey.bind({'cmd', 'alt'}, 't', function()
+    hs.hotkey.bind({'cmd', 'alt'}, 't', function()
         setLang(self.target, self.source)
-        local currentQuery = chooser:query()
-        reset()
-        chooser:query(currentQuery)  -- Force re-query with the updated languages
-        self:updateChooser(chooser, choices, reset)
+        chooser:query(chooser:query())  -- Force re-query with the updated languages
     end)
     
-    t = hs.hotkey.bind('cmd', 't', function()
+    hs.hotkey.bind('cmd', 't', function()
         setLang(self.target, self.source)
         reset()
     end)
 
-    copy = hs.hotkey.bind('cmd', 'c', function()
-        local id = chooser:selectedRow()
-        local item = choices[id]
+    hs.hotkey.bind('cmd', 'c', function()
+        local item = choices[chooser:selectedRow()]
         if item then
             chooser:hide()
             hs.pasteboard.setContents(item.text)
@@ -173,11 +156,7 @@ function obj:updateChooser(chooser, choices, reset)
             ["subText"] = query,
         }
 
-        local found = hs.fnutils.find(choices, function(element)
-            return element["text"] == translation
-        end)
-
-        if found == nil then 
+        if not hs.fnutils.find(choices, function(element) return element["text"] == translation end) then 
             table.insert(choices, 1, choice)
         end
 
@@ -187,35 +166,19 @@ end
 
 -- Perform translation for both Google and DeepL
 function obj:performTranslation(text, callback)
-    if self.apiProvider == "google" then
-        self:performGoogleTranslation(text, callback)
-    else
-        self:performDeepLTranslation(text, callback)
-    end
+    local translationFunction = self.apiProvider == "google" and self.performGoogleTranslation or self.performDeepLTranslation
+    translationFunction(self, text, callback)
 end
 
 -- Perform Google translation
 function obj:performGoogleTranslation(text, callback)
-    local url = string.format(
-        "https://translation.googleapis.com/language/translate/v2?key=%s",
-        self.APIKEY
-    )
-    
-    local headers = {
-        ["Content-Type"] = "application/json"
-    }
-    
-    local body = hs.json.encode({
-        q = text,
-        source = self.source,
-        target = self.target,
-        format = "text"
-    })
+    local url = string.format("https://translation.googleapis.com/language/translate/v2?key=%s", self.APIKEY)
+    local headers = {["Content-Type"] = "application/json"}
+    local body = hs.json.encode({q = text, source = self.source, target = self.target, format = "text"})
     
     hs.http.asyncPost(url, body, headers, function(status, responseBody, responseHeaders)
         if status == 200 then
-            local response = hs.json.decode(responseBody)
-            local translatedText = response.data.translations[1].translatedText
+            local translatedText = hs.json.decode(responseBody).data.translations[1].translatedText
             self:addToHistory(text, translatedText)
             hs.pasteboard.setContents(translatedText)
             if callback then callback(translatedText) end
@@ -227,28 +190,16 @@ end
 
 -- Perform DeepL translation
 function obj:performDeepLTranslation(text, callback)
-    -- Determine the correct DeepL API endpoint based on plan
-    local DEEPL_ENDPOINT = self.apiPlan == "pro" 
-        and 'https://api.deepl.com/v2/translate' 
-        or 'https://api-free.deepl.com/v2/translate'
-
-    local url = DEEPL_ENDPOINT
-
+    local DEEPL_ENDPOINT = self.apiPlan == "pro" and 'https://api.deepl.com/v2/translate' or 'https://api-free.deepl.com/v2/translate'
     local headers = {
         ["Authorization"] = "DeepL-Auth-Key " .. self.APIKEY,
         ["Content-Type"] = "application/json"
     }
+    local body = hs.json.encode({text = {text}, source_lang = self.source, target_lang = self.target})
 
-    local body = hs.json.encode({
-        text = { text },
-        source_lang = self.source,
-        target_lang = self.target
-    })
-
-    hs.http.asyncPost(url, body, headers, function(status, responseBody, responseHeaders)
+    hs.http.asyncPost(DEEPL_ENDPOINT, body, headers, function(status, responseBody, responseHeaders)
         if status == 200 then
-            local response = hs.json.decode(responseBody)
-            local translatedText = response.translations[1].text
+            local translatedText = hs.json.decode(responseBody).translations[1].text
             self:addToHistory(text, translatedText)
             hs.pasteboard.setContents(translatedText)
             if callback then callback(translatedText) end
@@ -268,19 +219,6 @@ end
 
 -- Set language
 function obj:setLanguage(which)
-    local chooser = hs.chooser.new(function(selection)
-        if selection then
-            if which == "source" then
-                self.source = selection.code
-                hs.settings.set("Translate_source", selection.code)
-            else
-                self.target = selection.code
-                hs.settings.set("Translate_target", selection.code)
-            end
-            hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
-        end
-    end)
-
     local languages = {
         {text = "English", code = "en"},
         {text = "Spanish", code = "es"},
@@ -298,15 +236,18 @@ function obj:setLanguage(which)
         table.insert(languages, 1, {text = "Auto Detect", code = "auto"})
     end
 
-    chooser:choices(languages)
-    chooser:show()
+    hs.chooser.new(function(selection)
+        if selection then
+            self[which] = selection.code
+            hs.settings.set("Translate_" .. which, selection.code)
+            hs.alert.show(string.format("%s language set to %s", which:gsub("^%l", string.upper), selection.text))
+        end
+    end):choices(languages):show()
 end
 
 -- Binds the hotkey
 function obj:bindHotkeys(mapping)
-    hs.spoons.bindHotkeysToSpec({
-        translate = hs.fnutils.partial(self.translate, self)
-    }, mapping)
+    hs.spoons.bindHotkeysToSpec({translate = hs.fnutils.partial(self.translate, self)}, mapping)
 end
 
 return obj
