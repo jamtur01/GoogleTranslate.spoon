@@ -55,12 +55,17 @@ jobs:
       - name: Determine Tag Name
         id: tag_name
         run: |
+          # Get current date and time
+          datetime=$(date +"%Y%m%d-%H%M%S")
+
+          # If obj.version is present, use it with a date-time suffix; otherwise, just use date-time
           if [ -n "${{ steps.version.outputs.version }}" ]; then
-            echo "::set-output name=tag_name::v${{ steps.version.outputs.version }}"
+            tag_name="v${{ steps.version.outputs.version }}-${datetime}"
           else
-            date=$(date +"%Y%m%d")
-            echo "::set-output name=tag_name::${date}-${{ steps.git-sha.outputs.sha }}"
+            tag_name="${datetime}"
           fi
+
+          echo "::set-output name=tag_name::$tag_name"
 
       - name: Create and Push Git Tag
         env:
@@ -92,8 +97,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag_name }}
-          name: ${{ needs.build.outputs.tag_name }}
+          tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
+          name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
           files: dist/${{ needs.build.outputs.spoon_name }}.spoon.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
