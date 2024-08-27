@@ -22,7 +22,7 @@ Translate is a Spoon for [Hammerspoon](http://www.hammerspoon.org/) that provide
 
 ## Installation
 
-1. Download the Translate.spoon and place it in your Hammerspoon Spoons directory (`~/.hammerspoon/Spoons/`).
+1. Download the Translate.spoon and place it in your Hammerspoon Spoons directory (`~/.hammerspoon/Spoons/` by default).
 2. Load the Spoon in your Hammerspoon configuration:
 
 ```lua
