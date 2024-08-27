@@ -56,16 +56,23 @@ jobs:
 
       - name: Generate Simple Changelog
         run: |
-          # Get the previous tag
-          last_tag=$(git describe --tags --abbrev=0)
+          # Get the previous tag if it exists, otherwise start from the beginning of the repository
+          last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$last_tag" ]; then
+            # No previous tag found, use the initial commit
+            echo "No previous tag found. Generating changelog from the start of the repository."
+            last_tag=$(git rev-list --max-parents=0 HEAD)
+          fi
+
           current_tag="${{ steps.tag_name.outputs.tag_name }}"
-          
+
           # Write the version header
           echo "## Version ${current_tag}" > CHANGELOG.md
-          
-          # List commits between the last tag and the current state
+
+          # List commits between the last tag (or start of repository) and the current state
           git log ${last_tag}..HEAD --pretty=format:"- %s" >> CHANGELOG.md
-          
+
           # Ensure the changelog is readable
           cat CHANGELOG.md
 
