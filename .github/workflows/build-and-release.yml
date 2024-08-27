@@ -29,8 +29,7 @@ jobs:
             echo "Spoon name not found, failing the job."
             exit 1
           fi
-          echo "Spoon name: $spoon_name"
-          echo "::set-output name=spoon_name::$spoon_name"
+          echo "spoon_name=${spoon_name}" >> $GITHUB_OUTPUT
 
       - name: Build the Spoon
         run: |
@@ -48,13 +47,15 @@ jobs:
 
       - name: Get the Git SHA
         id: git-sha
-        run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+        run: |
+          sha=$(git rev-parse --short HEAD)
+          echo "sha=${sha}" >> $GITHUB_OUTPUT
 
       - name: Extract obj.version from spoon
         id: version
         run: |
           version=$(grep -Eo 'obj.version\s*=\s*"[^"]+"' init.lua | cut -d'"' -f2 || echo "")
-          echo "::set-output name=version::$version"
+          echo "version=${version}" >> $GITHUB_OUTPUT
 
       - name: Determine Tag Name
         id: tag_name
@@ -65,7 +66,7 @@ jobs:
           else
             tag_name="${datetime}"
           fi
-          echo "::set-output name=tag_name::$tag_name"
+          echo "tag_name=${tag_name}" >> $GITHUB_OUTPUT
 
       - name: Create and Push Git Tag
         env:
@@ -90,7 +91,7 @@ jobs:
         run: ls -l .
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.build.outputs.tag_name }} # Use the tag created in the build step
           name: ${{ needs.build.outputs.tag_name }} # Release name based on the tag
