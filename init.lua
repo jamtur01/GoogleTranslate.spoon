@@ -113,12 +113,7 @@ function obj:translate()
 
     hs.hotkey.bind({'cmd', 'alt'}, 't', function()
         setLang(self.target, self.source)
-        chooser:query(chooser:query())  -- Force re-query with the updated languages
-    end)
-    
-    hs.hotkey.bind('cmd', 't', function()
-        setLang(self.target, self.source)
-        reset()
+        chooser:query(chooser:query())
     end)
 
     hs.hotkey.bind('cmd', 'c', function()
