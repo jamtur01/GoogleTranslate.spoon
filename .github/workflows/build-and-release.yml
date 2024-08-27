@@ -19,7 +19,9 @@ jobs:
 
       - name: Find the latest tag
         id: tag
-        run: echo "::set-output name=tag::$(git describe --tags --abbrev=0)"
+        run: |
+          tag_name=$(git describe --tags --abbrev=0)
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
 
       - name: Build the Spoon Zip
         run: |
