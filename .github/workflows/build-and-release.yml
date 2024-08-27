@@ -33,9 +33,11 @@ jobs:
 
       - name: Generate Changelog
         run: |
-          # Install github-changelog-generator if using it
-          gem install github_changelog_generator
-          # Generate changelog and append to CHANGELOG.md
+          # Install github-changelog-generator locally
+          gem install --user-install github_changelog_generator
+          # Ensure the gem's bin directory is in the PATH
+          export PATH="$HOME/.local/share/gem/ruby/$(ls $HOME/.local/share/gem/ruby)/bin:$PATH"
+          # Generate the changelog and append to CHANGELOG.md
           github_changelog_generator -u ${{ github.repository_owner }} -p ${{ github.event.repository.name }}
 
       - name: Commit and Push Changelog
