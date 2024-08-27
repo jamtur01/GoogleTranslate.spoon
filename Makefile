@@ -9,7 +9,7 @@ release: clean_changelog changelog check_tag_exists create_tag push_tag
 # Clean the old changelog file
 clean_changelog:
 	@echo "Cleaning old CHANGELOG.md"
-@rm -f CHANGELOG.md
+	@rm -f CHANGELOG.md
 
 # Generate a simple changelog from git log
 changelog:
