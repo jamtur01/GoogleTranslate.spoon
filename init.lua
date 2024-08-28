@@ -3,7 +3,7 @@ obj.__index = obj
 
 -- Metadata
 obj.name = "Translate"
-obj.version = "1.0"
+obj.version = "1.1"
 obj.author = "James Turnbull <james@lovedthanlost.net>"
 obj.license = "MIT"
 obj.homepage = "https://github.com/jamtur01/Translate.spoon"
