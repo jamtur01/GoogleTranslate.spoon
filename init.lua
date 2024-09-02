@@ -86,7 +86,6 @@ function obj:translate()
         return
     end
 
-    local alerts = {}
     local current = hs.application.frontmostApplication()
     local choices = {}
 
@@ -101,38 +100,18 @@ function obj:translate()
         chooser:choices({})
     end
 
-    local function setLang(so, ta)
-        self.source, self.target = so, ta
-        hs.alert.closeSpecific(alerts["langPrimary"], 0)
-        hs.alert.closeSpecific(alerts["langSecondary"], 0)
-        alerts["langPrimary"] = hs.alert.show(string.format('%s ⇢ %s', string.upper(self.source), string.upper(self.target)), { ["textSize"] = 50 }, 2)
-        alerts["langSecondary"] = hs.alert.show('⌘⌥T to switch.', 2)
-        reset()
-        self:updateChooser(chooser, choices, reset)
-    end
-
     hs.hotkey.bind({'cmd', 'alt'}, 't', function()
-        setLang(self.target, self.source)
+        self.source, self.target = self.target, self.source
+        hs.alert.show(string.format('%s ⇢ %s', string.upper(self.source), string.upper(self.target)))
         chooser:query(chooser:query())
-    end)
-
-    hs.hotkey.bind('cmd', 'c', function()
-        local item = choices[chooser:selectedRow()]
-        if item then
-            chooser:hide()
-            hs.pasteboard.setContents(item.text)
-            hs.alert.show("Copied to clipboard", 1)
-        else
-            hs.alert.show("No search result to copy", 1)
-        end
     end)
 
     chooser:queryChangedCallback(function()
         self:updateChooser(chooser, choices, reset)
     end)
+
     chooser:searchSubText(false)
     chooser:show()
-    setLang(self.source, self.target)
 end
 
 -- Update chooser based on the current query
